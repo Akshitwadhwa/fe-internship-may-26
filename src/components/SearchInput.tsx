@@ -12,7 +12,11 @@ export function SearchInput({ value, onChange, placeholder = 'Search...' }: Sear
   useEffect(() => {
     inputRef.current?.focus()
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === '/' && document.activeElement !== inputRef.current) {
+      const shouldFocus =
+        (e.key === '/' && document.activeElement !== inputRef.current) ||
+        ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k')
+
+      if (shouldFocus) {
         e.preventDefault()
         inputRef.current?.focus()
       }

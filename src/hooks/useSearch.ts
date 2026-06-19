@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Item } from '../types'
 import { searchItems } from '../services/mockApi'
+import { useDebounce } from './useDebounce'
 
 export interface UseSearchReturn {
   query: string
@@ -11,22 +12,39 @@ export interface UseSearchReturn {
 }
 
 export function useSearch(): UseSearchReturn {
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(() => new URLSearchParams(window.location.search).get('q') ?? '')
   const [results, setResults] = useState<Item[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const debouncedQuery = useDebounce(query, 300)
   const requestIdRef = useRef(0)
 
   useEffect(() => {
-    const requestId = ++requestIdRef.current
+    requestIdRef.current += 1
+  }, [query])
+
+  useEffect(() => {
+    const url = new URL(window.location.href)
+
+    if (query.trim()) {
+      url.searchParams.set('q', query)
+    } else {
+      url.searchParams.delete('q')
+    }
+
+    window.history.replaceState(null, '', url)
+  }, [query])
+
+  useEffect(() => {
+    const requestId = requestIdRef.current
     let isCancelled = false
 
-    const timerId = window.setTimeout(async () => {
+    const runSearch = async () => {
       setIsLoading(true)
       setError(null)
 
       try {
-        const items = await searchItems(query)
+        const items = await searchItems(debouncedQuery)
 
         if (!isCancelled && requestId === requestIdRef.current) {
           setResults(items)
@@ -41,13 +59,14 @@ export function useSearch(): UseSearchReturn {
           setIsLoading(false)
         }
       }
-    }, 300)
+    }
+
+    runSearch()
 
     return () => {
       isCancelled = true
-      window.clearTimeout(timerId)
     }
-  }, [query])
+  }, [debouncedQuery])
 
   return { query, setQuery, results, isLoading, error }
 }

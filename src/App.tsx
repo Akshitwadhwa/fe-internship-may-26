@@ -37,7 +37,7 @@ export default function App() {
         {isLoading ? (
           <LoadingState />
         ) : results.length > 0 ? (
-          <ItemList items={results} />
+          <ItemList items={results} query={query} />
         ) : (
           <EmptyState query={query} />
         )}
